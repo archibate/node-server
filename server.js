@@ -74,6 +74,7 @@ server.on('request',(req,res)=>{
 					envs.push('QUERY_STRING=' + query);
 				var cmdline = envs.join(' ');
 				cmdline += ' ' + sov.cgi;
+				if (query) cmdline += ' \'' + query + '\'';
 				proc.exec(cmdline, (err,stdout,stderr)=>{
 					if (err) throw err;
 					if (stderr) throw stderr;
