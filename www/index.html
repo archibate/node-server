@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+		<title>Game of Life</title>
+		<style type="text/css" mce_bogus="1">
+			table {margin:auto;}
+                </style>
+	</head>
+	<body>
+		<table>
+			<tr align="center"><td colspan="2"><h3 id="headName">Game of Life</h3><hr height="1px"/></td></tr>
+			<tr>
+				<td align="left">Gen: <span id="spanGen">0</span></td>
+				<td align="right">
+					<button id="btnStart" onclick="startGame();return true;">Start</button>
+					<button id="btnPause" onclick="pauseGame();return true;" disabled="disabled">Pause</button>
+					<button id="btnReset" onclick="resetGame();return true;">Reset</button>
+					<button id="btnRandom" onclick="randomGame();return true;">Random</button>
+					<button id="btnHelp" onclick="help();return true;"><strong>?</strong></button>
+				</td>
+			</tr>
+			<tr align="center">
+			 <td align="left">Rule:</td>
+   <td align="right">
+					<select id="selRuleName" style="width:100%" onchange="loadRule(selRuleName.value);return true;">
+					 <option value="conway">Conway's Game of Life</option>
+     <option value="wireworld">Wire World</option>
+					</select>
+		  </td>
+			</tr>
+			<tr align="center">
+				<td colspan="2"><canvas id="space" width="300" height="300" style="border: 1px solid; background-color: #eeeeee;" /></td>
+			</tr>
+			<tr align="center">
+				<td colspan="2">&copy; April, 2019, <a href="https://github.com/archibate">archibate<a/></td>
+			</tr>
+		</table>
+	</body>
+	<script type="text/javascript">
+		var canvas = document.getElementById('space');
+		var context = canvas.getContext('2d');
+		var timerInterval = 10;	// ms
+		var cellWidth = 20;	// please ensure: cellWidth > 2
+		var cellXLen = 15;	// please ensure: cellWidth * cellXLen = canvas.width
+		var cellYLen = 15;	// please ensure: cellWidth * cellYLen = canvas.height
+		var cells = [];
+		var running = 0;
+		var generation = 0;
+		
+		function drawCell(x,y,state){
+			  var cx = x * cellWidth;
+			  var cy = y * cellWidth;
+				if(state){
+					context.fillStyle = ["Silver", "LightSalmon", "LightYellow"][state-1];
+					context.fillRect(cx, cy, cellWidth, cellWidth);
+					context.strokeStyle = ["DarkGray", "Salmon", "DarkGoldenRod"][state-1];
+					context.strokeRect(cx+1, cy+1, cellWidth-2, cellWidth-2);
+				}
+				else{
+					context.clearRect(cx, cy, cellWidth, cellWidth);
+				}
+		}
+		
+		function setCell(x,y,state){
+				cells[[x,y]] = state;
+			 drawCell(x, y, state);
+		}
+		
+		var rules = {
+		 conway: {
+	 	name:"Conway's Game of Life",
+	 	helpUrl:"http://en.wikipedia.org/wiki/Conway's_Game_of_Life",
+	 	numStates:2,
+	 	apply: function(x,y){
+				var neighbours = [];
+				var neighbourCount = 0;
+				var currentState = cells[[x,y]];
+				var nextState = 0;
+				neighbours[0] = cells[[(x-1+cellXLen)%cellXLen, (y-1+cellYLen)%cellYLen]];
+				neighbours[1] = cells[[(x-1+cellXLen)%cellXLen, (y+1+cellYLen)%cellYLen]];
+				neighbours[2] = cells[[(x+cellXLen)%cellXLen, (y+1+cellYLen)%cellYLen]];
+				neighbours[3] = cells[[(x+cellXLen)%cellXLen, (y-1+cellYLen)%cellYLen]];
+				neighbours[4] = cells[[(x+1+cellXLen)%cellXLen, (y+1+cellYLen)%cellYLen]];
+				neighbours[5] = cells[[(x+1+cellXLen)%cellXLen, (y-1+cellYLen)%cellYLen]];
+				neighbours[6] = cells[[(x+1+cellXLen)%cellXLen, (y+cellYLen)%cellYLen]];
+				neighbours[7] = cells[[(x-1+cellXLen)%cellXLen, (y+cellYLen)%cellYLen]];
+				for(i=0;i<8;i++){
+					state = neighbours[i];
+					if(state && state==1) neighbourCount++;
+				}
+				if(currentState && currentState==1){
+					if(neighbourCount<2 || neighbourCount>3) return 0;
+					else return 1;
+				}else{
+					if(neighbourCount==3) return 1;
+					else return 0;
+				}
+			},},
+				
+	 	wireworld: {
+	 	name:"Wire World",
+	 	helpUrl:"https://baike.sogou.com/m/fullLemma?lid=73636347&fromTitle=Wireworld",
+	 	numStates:4,
+	 	apply: function(x,y){
+				var currentState = cells[[x,y]];
+				if(!(currentState&&currentState>0)) return currentState;
+				else if(currentState!=1)return currentState-1;
+				var neighbours = [];
+				var neighbourCount = 0;
+				neighbours[0] = cells[[(x-1+cellXLen)%cellXLen, (y-1+cellYLen)%cellYLen]];
+				neighbours[1] = cells[[(x-1+cellXLen)%cellXLen, (y+1+cellYLen)%cellYLen]];
+				neighbours[2] = cells[[(x+cellXLen)%cellXLen, (y+1+cellYLen)%cellYLen]];
+				neighbours[3] = cells[[(x+cellXLen)%cellXLen, (y-1+cellYLen)%cellYLen]];
+				neighbours[4] = cells[[(x+1+cellXLen)%cellXLen, (y+1+cellYLen)%cellYLen]];
+				neighbours[5] = cells[[(x+1+cellXLen)%cellXLen, (y-1+cellYLen)%cellYLen]];
+				neighbours[6] = cells[[(x+1+cellXLen)%cellXLen, (y+cellYLen)%cellYLen]];
+				neighbours[7] = cells[[(x-1+cellXLen)%cellXLen, (y+cellYLen)%cellYLen]];
+				for(i=0;i<8;i++){
+					state = neighbours[i];
+					if(state && state==3) neighbourCount++;
+				}
+				if(neighbourCount==2 || neighbourCount==1) return 3;
+				else return 1;
+		 },},
+		};
+		
+		var rule;
+		
+		function loadRule(name)	{
+			rule=rules[name];
+			headName.innerHTML = rule.name;
+		}
+		loadRule('conway');
+		
+		function loadGame(){
+			canvas.onmousedown = function(e){
+				if(running==1) return;
+				if(e.offsetX) {
+	                          x = e.offsetX;
+	                          y = e.offsetY;
+		                }
+		                else if(e.layerX) {
+		                  x = e.layerX;
+		                  y = e.layerY;
+		                }
+				x = Math.floor(x / cellWidth);
+				y = Math.floor(y / cellWidth);
+				state = cells[[x,y]];
+				if(state){
+					state = (state+1)%rule.numStates;
+					setCell(x,y,state);
+				}else{
+					setCell(x,y,1);
+			 }
+			}
+		}
+		
+		function startGame(){
+			function runGame(){
+				var x, y;
+				var nextgen = [];
+				for(x=0;x<cellXLen;x++){
+					for(y=0;y<cellYLen;y++){
+						nextgen[[x,y]] = rule.apply(x,y);
+					}
+				}
+				cells = nextgen;
+				for(x=0;x<cellXLen;x++){
+					for(y=0;y<cellYLen;y++){
+						drawCell(x, y, cells[[x,y]]);
+					}
+				}
+				generation++;
+				spanGen.innerHTML = generation;
+			 if(running==1) setTimeout(runGame, timerInterval);	
+			}
+			btnStart.disabled = true;
+			btnPause.disabled = false;
+			btnReset.disabled = true;
+			btnRandom.disabled = true;
+			selRuleName.disabled = true;
+			running = 1;
+			runGame();
+		}
+		
+		function pauseGame(){
+			running = 0;
+			btnStart.disabled = false;
+			btnPause.disabled = true;
+			btnReset.disabled = false;
+			btnRandom.disabled = false;
+			selRuleName.disabled = false;
+		}
+		
+		function resetGame(){
+			for(var x=0;x<cellXLen;x++){
+					for(var y=0;y<cellYLen;y++){
+						drawCell(x,y,0);
+					}
+				}
+			cells = [];
+			generation = 0;
+			spanGen.innerHTML = generation;
+		}
+		
+		function randomGame(){
+			for(var x=0;x<cellXLen;x++){
+					for(var y=0;y<cellYLen;y++){
+						var s = Math.floor(Math.random() * rule.numStates);
+						setCell(x,y,s);
+					}
+				}
+			generation = 0;
+			spanGen.innerHTML = generation;
+		}
+		
+		function help(){
+			window.open(rule.helpUrl);
+		}
+			
+		window.addEventListener("load", loadGame, true);
+ </script>
+<html>
